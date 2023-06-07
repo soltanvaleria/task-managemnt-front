@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../constants/enums.dart';
 import '../../../models/subtasks.dart';
 
 class NewSubtaskForm extends StatefulWidget {
+  final int? taskId;
+
+  const NewSubtaskForm({super.key, required this.taskId});
   @override
   State<NewSubtaskForm> createState() => _NewSubtaskFormState();
 }
 
 class _NewSubtaskFormState extends State<NewSubtaskForm> {
   Subtask _subtask = Subtask();
-  Priority? _priority;
-  SubtaskType? _type;
+
   TextEditingController _dateController = TextEditingController();
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -87,7 +90,6 @@ class _NewSubtaskFormState extends State<NewSubtaskForm> {
 
   void _clearDate() {
     setState(() {
-      _subtask.deadline = null;
       _dateController.clear();
     });
   }
@@ -133,11 +135,11 @@ class _NewSubtaskFormState extends State<NewSubtaskForm> {
             children: [
               Expanded(
                 child: RadioListTile(
-                  value: SubtaskType.CODDING,
-                  groupValue: _type,
+                  value: SubtaskType.CODING,
+                  groupValue: _subtask.type,
                   onChanged: (val) {
                     setState(() {
-                      _type = val;
+                      _subtask.type = val;
                     });
                   },
                   title: Text('Codding'),
@@ -146,10 +148,10 @@ class _NewSubtaskFormState extends State<NewSubtaskForm> {
               Expanded(
                 child: RadioListTile(
                   value: SubtaskType.TESTING,
-                  groupValue: _type,
+                  groupValue: _subtask.type,
                   onChanged: (val) {
                     setState(() {
-                      _type = val;
+                      _subtask.type = val;
                     });
                   },
                   title: Text('Testing'),
@@ -164,6 +166,18 @@ class _NewSubtaskFormState extends State<NewSubtaskForm> {
 
   @override
   Widget build(BuildContext context) {
+    void createSubTask()async{
+      final isValid = _formKey.currentState?.validate();
+      if (isValid!){
+        try{
+          _formKey.currentState?.save();
+          await Provider.of<Subtask>(context, listen: false).createSubTask(_subtask, widget.taskId);
+          Navigator.of(context).pop();
+        }catch(error){
+          print(error);
+        }
+      }
+    }
     return Scaffold(
         resizeToAvoidBottomInset:false,
       appBar: _buildAppBar(context),
@@ -191,12 +205,7 @@ class _NewSubtaskFormState extends State<NewSubtaskForm> {
         ),
         elevation: 0,
         backgroundColor: Colors.black,
-        onPressed: () {
-          if (!_formKey.currentState!.validate()) {
-            return;
-          }
-          _formKey.currentState!.save();
-        },
+        onPressed: createSubTask,
         child: Icon(
           Icons.add,
           size: 35,

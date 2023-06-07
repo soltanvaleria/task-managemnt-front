@@ -10,17 +10,22 @@ class TaskList with ChangeNotifier {
   List<Task> _taskList = [];
 
   Future<void> fetchTaskList() async {
-    // var requestResponse = await http.get(Uri.http(HttpConfig.domain, '/tasks'));
-    // // var requestData = jsonDecode(requestResponse.body); pentru un singur dto
-    // var requestData = jsonDecode(requestResponse.body) as List;
-    // List<Test> fetchedList = [];
-    // for (var element in requestData) {
-    //   fetchedList.add(Test.fromJson(element));
-    // }
-    // // var requestedTest = Test.fromJson(requestData);
-    // // print(requestedTest);
-    // _testList = fetchedList;
-    // notifyListeners();
+    try{
+      var requestResponse = await http.get(Uri.http(HttpConfig.domain, '/tasks'));
+      var requestData = jsonDecode(requestResponse.body) as List;
+      List<Task> fetchedList = [];
+      for (var task in requestData){
+        fetchedList.add(Task.fromJson(task));
+      }
+      this._taskList = fetchedList;
+      notifyListeners();
+    }
+    catch(error){
+      print(error);
+    }
   }
 
+  List<Task> get getTaskList {
+    return [..._taskList];
+  }
 }

@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:task_management_front/constants/enums.dart';
+import 'package:task_management_front/models/filter.dart';
+import 'package:task_management_front/models/subtask_list.dart';
+import 'package:task_management_front/models/subtasks.dart';
 import '../../models/task.dart';
 import 'newTask/newSubtaskForm.dart';
 
@@ -12,10 +17,59 @@ class DetailPage extends StatefulWidget {
 
 class _DetailPage extends State<DetailPage> {
   final Task task;
+  var subTaskProvider;
+  var isFetched = false;
+  final _filter = Filter();
 
   _DetailPage(this.task);
 
+  @override
+  void didChangeDependencies() {
+    if (!isFetched) {
+      subTaskProvider = Provider.of<SubtaskList>(context);
+      subTaskProvider.getSubTaskById(task.id);
+      setState(() {
+        isFetched = true;
+      });
+    }
+    super.didChangeDependencies();
+  }
+
   Widget build(BuildContext context) {
+    final subTaskList = subTaskProvider.subtaskList;
+    void markAsDone(int? id) async {
+      try {
+        await subTaskProvider.markAsDone(id);
+      } catch (error) {
+        print(error);
+      }
+    }
+
+    void deleteSubTask(int? id) async {
+      try {
+        await subTaskProvider.deleteSubtask(id);
+        Navigator.of(context).pop();
+      } catch (error) {
+        print(error);
+      }
+    }
+
+    void sortSubtasks(int? id) async {
+      try {
+        await subTaskProvider.sortSubtaskList(id);
+      } catch (error) {
+        print(error);
+      }
+    }
+
+    void filterSubtasks(int? id) async {
+      try {
+        await subTaskProvider.filterSubtask(id, _filter);
+      } catch (error) {
+        print(error);
+      }
+    }
+
     return Scaffold(
       appBar: _buildAppBar(context),
       body: Column(
@@ -24,7 +78,7 @@ class _DetailPage extends State<DetailPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                onPressed: () {},
+                onPressed: () => sortSubtasks(task.id),
                 icon: Icon(Icons.sort_rounded),
                 iconSize: 35,
               ),
@@ -38,14 +92,43 @@ class _DetailPage extends State<DetailPage> {
                       lastDate: DateTime(2024),
                     ).then((selectedDate) {
                       if (selectedDate != null) {
-                        // Procesează data selectată
+                        _filter.deadline = selectedDate;
+                        filterSubtasks(task.id);
                       }
                     });
                   } else if (value == 'Type') {
                     showDialog(
                       context: context,
-                      builder: (BuildContext context) =>
-                          _buildTypeDialog(context),
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Select Type'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                title: Text('Coding'),
+                                onTap: () {
+                                  // Procesează selecția tipului Coding
+                                  print('Selected type: Coding');
+                                  _filter.type = SubtaskType.CODING;
+                                  filterSubtasks(task.id);
+                                  Navigator.pop(context);
+                                },
+                              ),
+                              ListTile(
+                                title: Text('Testing'),
+                                onTap: () {
+                                  // Procesează selecția tipului Testing
+                                  print('Selected type: Testing');
+                                  _filter.type = SubtaskType.TESTING;
+                                  filterSubtasks(task.id);
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     );
                   }
                 },
@@ -73,9 +156,9 @@ class _DetailPage extends State<DetailPage> {
             child: ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              itemCount: task.subtasksList?.length,
+              itemCount: subTaskList?.length,
               itemBuilder: (context, index) {
-                var subtask = task.subtasksList![index];
+                var subtask = subTaskList![index];
                 return CheckboxListTile(
                   title: Text(
                     '${subtask.title}',
@@ -120,7 +203,29 @@ class _DetailPage extends State<DetailPage> {
                       PopupMenuButton<String>(
                         onSelected: (value) {
                           if (value == 'edit') {
-                          } else if (value == 'delete') {}
+                          } else if (value == 'delete') {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text(
+                                      'Are you sure you want to delete this subTask?'),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text('Cancel')),
+                                    TextButton(
+                                      onPressed: () =>
+                                          deleteSubTask(subtask.id),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          }
                         },
                         itemBuilder: (BuildContext context) {
                           return <PopupMenuEntry<String>>[
@@ -150,7 +255,10 @@ class _DetailPage extends State<DetailPage> {
                   ),
                   onChanged: (bool? value) {
                     setState(() {
-                      subtask.isCompleted = value;
+                      if (value!) {
+                        subtask.isCompleted = value;
+                        markAsDone(subtask.id);
+                      }
                     });
                   },
                 );
@@ -168,8 +276,10 @@ class _DetailPage extends State<DetailPage> {
         elevation: 0,
         backgroundColor: Colors.black,
         onPressed: () {
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (context) => NewSubtaskForm()));
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => NewSubtaskForm(
+                    taskId: task.id,
+                  )));
         },
         child: Icon(
           Icons.add,
@@ -253,30 +363,7 @@ class _DetailPage extends State<DetailPage> {
     );
   }
 
-  _buildTypeDialog(BuildContext context) {
-    return AlertDialog(
-      title: Text('Select Type'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: Text('Coding'),
-            onTap: () {
-              // Procesează selecția tipului Coding
-              print('Selected type: Coding');
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            title: Text('Testing'),
-            onTap: () {
-              // Procesează selecția tipului Testing
-              print('Selected type: Testing');
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
+// _buildTypeDialog(BuildContext context) {
+//   return
+// }
 }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:task_management_front/models/subtask_list.dart';
+import 'package:task_management_front/models/subtasks.dart';
 import 'package:task_management_front/screens/home/home.dart';
 
+import 'models/task.dart';
 import 'models/task_list.dart';
 
 void main() {
@@ -20,6 +23,9 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => TaskList()),
+        ChangeNotifierProvider(create: (context) => Task()),
+        ChangeNotifierProvider(create: (context) => Subtask()),
+        ChangeNotifierProvider(create: (context) => SubtaskList()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

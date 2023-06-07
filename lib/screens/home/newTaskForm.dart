@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../constants/enums.dart';
 import '../../models/task.dart';
@@ -133,6 +134,19 @@ class _NewTaskFormState extends State<NewTaskForm> {
   }
 
   Widget build(BuildContext context) {
+    final taskProvider = Provider.of<Task>(context, listen: false);
+    void addTask() async{
+      final isValid = _formKey.currentState!.validate();
+      if (isValid){
+        _formKey.currentState!.save();
+        try{
+          await taskProvider.createTask(_task);
+          Navigator.of(context).pop();
+        }catch (error){
+          print('error');
+        }
+      }
+    }
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: _buildAppBar(context),
@@ -159,12 +173,7 @@ class _NewTaskFormState extends State<NewTaskForm> {
         ),
         elevation: 0,
         backgroundColor: Colors.black,
-        onPressed: () {
-          if (!_formKey.currentState!.validate()) {
-            return;
-          }
-          _formKey.currentState!.save();
-        },
+        onPressed: addTask,
         child: Icon(
           Icons.add,
           size: 35,
